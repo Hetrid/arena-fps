@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#101923" />
+    <title>ARENA FPS · Deathmatch</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./css/style.css?v=dm3" />
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.js" } }
+    </script>
+    <script src="./vendor/peerjs.min.js"></script>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="shade"></div>
+    <main id="menu" class="panel">
+      <div class="eyebrow">DEATHMATCH · v3</div>
+      <h1>ARENA<span>FPS</span></h1>
+      <p class="intro">Jump in. Pick a gun. Keep moving.</p>
+      <label
+        >YOUR NAME<input
+          id="name"
+          maxlength="18"
+          value="Rookie"
+          autocomplete="nickname" /></label
+      ><button id="practice" class="primary">Play Bots <span>→</span></button>
+      <div class="row">
+        <button id="create">Create Room</button
+        ><button id="joinToggle">Join Room</button>
+      </div>
+      <form id="joinForm" hidden>
+        <label
+          >ROOM CODE OR INVITE LINK<input
+            id="roomInput"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="ABC234"
+            autocomplete="off" /></label
+        ><button class="primary" type="submit">Join</button>
+      </form>
+      <details>
+        <summary>Bot game options</summary>
+        <div class="optionsRow">
+          <label>BOTS<select id="soloBots"></select></label
+          ><label
+            >DIFFICULTY<select id="soloDifficulty">
+              <option value="easy">Easy</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Hard</option>
+            </select></label
+          >
+        </div>
+        <label>MAP<select id="soloMap"></select></label>
+      </details>
+      <button id="settingsOpen" class="quiet">Settings</button>
+      <p class="footnote">18 guns · 3 maps · 3-second respawns</p>
+      <p id="menuError" role="alert"></p>
+      <p id="bootError" role="alert"></p>
+    </main>
+    <section id="connecting" class="panel" hidden>
+      <div class="eyebrow">MULTIPLAYER</div>
+      <h2 id="connectStatus">Connecting…</h2>
+      <p id="connectHint" class="muted">
+        Keep the host's game open while joining.
+      </p>
+      <button id="cancel">Cancel</button>
+    </section>
+    <section id="lobby" class="panel wide" hidden>
+      <div class="eyebrow">DEATHMATCH ROOM</div>
+      <div class="roomHeader">
+        <h2 id="roomCode"></h2>
+        <button id="copy">Copy Invite</button>
+      </div>
+      <p id="lobbyCount" class="muted"></p>
+      <div id="hostOptions">
+        <label>MAP<select id="mapSelect"></select></label>
+        <div class="optionsRow">
+          <label>BOTS<select id="botCount"></select></label
+          ><label
+            >DIFFICULTY<select id="botDifficulty">
+              <option value="easy">Easy</option>
+              <option value="normal">Normal</option>
+              <option value="hard">Hard</option>
+            </select></label
+          >
+        </div>
+      </div>
+      <div id="lobbyPlayers"></div>
+      <p id="lobbyNote" class="muted"></p>
+      <div class="row lobbyActions">
+        <button id="start" class="primary">Start Deathmatch</button
+        ><button id="leaveLobby">Leave</button>
+      </div>
+    </section>
+    <section id="settings" class="panel wide" hidden>
+      <div class="eyebrow">PREFERENCES</div>
+      <h2>Settings</h2>
+      <div class="optionsRow">
+        <label
+          >GRAPHICS<select id="quality">
+            <option value="auto">Automatic</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select></label
+        ><label
+          >VOLUME<input
+            id="volume"
+            type="range"
+            min="0"
+            max="1"
+            step=".1"
+            value=".35"
+        /></label>
+      </div>
+      <label
+        >TOUCH SENSITIVITY <output id="sensitivityValue">1.0</output
+        ><input
+          id="sensitivity"
+          type="range"
+          min=".3"
+          max="2.5"
+          step=".1"
+          value="1" /></label
+      ><label class="check"
+        ><input id="aimEnabled" type="checkbox" checked /> Mobile aim
+        assist</label
+      ><label
+        >ASSIST STRENGTH<input
+          id="aimStrength"
+          type="range"
+          min="0"
+          max="1"
+          step=".1"
+          value=".7" /></label
+      ><button id="editLayout">Move / Resize Touch Buttons</button>
+      <div id="liveBots" hidden>
+        <div class="eyebrow">HOST BOT SETTINGS</div>
+        <div class="optionsRow">
+          <label>BOTS<select id="liveBotCount"></select></label
+          ><label
+            >DIFFICULTY<select id="liveDifficulty">
+              <option value="easy">Easy</option>
+              <option value="normal">Normal</option>
+              <option value="hard">Hard</option>
+            </select></label
+          >
+        </div>
+      </div>
+      <details>
+        <summary>Connection help</summary>
+        <p class="footnote">
+          Use the same updated game on both devices and keep the host tab open.
+          If a network blocks peer connections, use a TURN relay. These settings
+          apply when you next connect.
+        </p>
+        <label
+          >SIGNALING SERVER (OPTIONAL)<input
+            id="signalHost"
+            placeholder="Default PeerJS cloud"
+            autocomplete="off"
+        /></label>
+        <div class="optionsRow">
+          <label>PORT<input id="signalPort" type="number" value="443" /></label
+          ><label>PATH<input id="signalPath" value="/" /></label>
+        </div>
+        <label
+          >TURN URL (OPTIONAL)<input
+            id="turnUrl"
+            placeholder="turn:your-relay:3478"
+            autocomplete="off" /></label
+        ><label>TURN USER<input id="turnUser" autocomplete="off" /></label
+        ><label
+          >TURN PASSWORD<input id="turnPass" type="password" autocomplete="off"
+        /></label>
+        <div class="row">
+          <button id="saveConnection">Save</button
+          ><button id="resetConnection">Reset</button>
+        </div>
+        <button id="testConnection">Test Room Service</button>
+        <p id="connectionTest" class="muted" role="status"></p>
+      </details>
+      <button id="settingsClose" class="primary">Done</button>
+    </section>
+    <div id="hud" hidden>
+      <header>
+        <div class="matchInfo">
+          <span class="eyebrow">DEATHMATCH</span><b id="timer">05:00</b>
+        </div>
+        <span id="matchGoal">FIRST TO 25</span>
+        <div class="hudActions">
+          <button id="gunsToggle">GUNS</button
+          ><button id="scoreToggle">KILLS <b id="score">0</b></button
+          ><button id="pauseButton" aria-label="Pause">Ⅱ</button>
+        </div>
+        <span id="ping"></span>
+      </header>
+      <div id="killfeed"></div>
+      <div id="crosshair"><i></i><i></i><i></i><i></i></div>
+      <div id="hitmarker">×</div>
+      <div id="damageOverlay"></div>
+      <div id="announcement"></div>
+      <footer>
+        <div class="health">
+          <span class="eyebrow">HEALTH</span><b id="health">100</b>
+          <div id="healthBar"></div>
+        </div>
+        <div class="ammo">
+          <span id="reloadText"></span><span id="weaponName"></span
+          ><b id="ammo">30</b><small id="reserve">/ 120</small>
+        </div>
+      </footer>
+    </div>
+    <div id="touch" hidden>
+      <div id="lookZone"></div>
+      <div id="joystick" data-control><div id="stick"></div></div>
+      <button id="fire" data-control aria-label="Fire">◎</button
+      ><button id="jump" data-control>↑</button
+      ><button id="reload" data-control>R</button
+      ><button id="sprint" data-control>RUN</button
+      ><button id="ads" data-control>ADS</button
+      ><button id="crouch" data-control>LOW</button
+      ><button id="switchGun" data-control>1↔2</button>
+    </div>
+    <section id="loadout" class="panel wide" hidden>
+      <div class="eyebrow">ALL GUNS UNLOCKED</div>
+      <h2>Choose a gun</h2>
+      <p class="muted">
+        One primary and one sidearm. Your loadout stays after respawning.
+      </p>
+      <div id="gunItems" class="gunGrid"></div>
+      <button id="loadoutClose" class="primary">Back to Game</button>
+    </section>
+    <section id="pause" class="panel" hidden>
+      <div class="eyebrow">MATCH IS LIVE</div>
+      <h2>Ready?</h2>
+      <p class="footnote">
+        WASD move · mouse aim · click fire<br />Right-click aim · R reload ·
+        Space jump<br />Shift sprint · Ctrl crouch · 1 / 2 switch<br />B guns ·
+        Tab scores · Esc pause
+      </p>
+      <button id="resume" class="primary">Play / Resume</button
+      ><button id="pauseGuns">Choose Gun</button
+      ><button id="pauseSettings">Settings</button
+      ><button id="leaveGame" class="quiet">Leave Match</button>
+    </section>
+    <section id="scoreboard" class="panel wide" hidden>
+      <div class="roomHeader">
+        <h2>Leaderboard</h2>
+        <button id="scoreClose">Close</button>
+      </div>
+      <div id="scoreTable"></div>
+    </section>
+    <section id="results" class="panel wide" hidden>
+      <div class="eyebrow">MATCH COMPLETE</div>
+      <h2 id="winner"></h2>
+      <div id="resultTable"></div>
+      <p id="rematchInfo" class="muted"></p>
+      <button id="rematch" class="primary">Play Again</button
+      ><button id="leaveResults" class="quiet">Return to Menu</button>
+    </section>
+    <section id="layoutEditor" class="layoutPanel" hidden>
+      <div class="eyebrow">TOUCH LAYOUT</div>
+      <p>Drag a button. Select it to resize.</p>
+      <label id="selectedControl">Fire</label
+      ><input
+        id="controlSize"
+        type="range"
+        min=".65"
+        max="1.8"
+        step=".05"
+        value="1"
+      /><label
+        >OPACITY<input
+          id="controlOpacity"
+          type="range"
+          min=".25"
+          max="1"
+          step=".05"
+          value=".8"
+      /></label>
+      <div class="row">
+        <button id="layoutDone" class="primary">Save / Done</button
+        ><button id="layoutReset">Reset</button>
+      </div>
+    </section>
+    <div id="rotate" hidden>Rotate your device to landscape.</div>
+    <div id="toast" role="status"></div>
+    <script type="module" src="./js/dm/main.js"></script>
+    <script>
+      addEventListener("error", function (e) {
+        if (!document.querySelector("#menu").hidden)
+          document.querySelector("#bootError").textContent =
+            "Loading error: " + (e.message || "Check the uploaded files.");
+      });
+      setTimeout(function () {
+        if (!window.arenaReady)
+          document.querySelector("#bootError").textContent =
+            location.protocol === "file:"
+              ? "Open the game through your web address or a local web server."
+              : "Game could not load. Upload all folders, including js/dm/, then refresh.";
+      }, 12000);
+    </script>
+  </body>
+</html>
